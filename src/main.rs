@@ -3,7 +3,6 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::error::Error;
 use std::io::Cursor;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::SeekFrom;
@@ -61,7 +60,7 @@ fn main() {
 
     // 파일을 생성한다.
     let mut f = match File::open(&path) {
-        Err(why) => panic!("error {} {}", display, why.description()),
+        Err(why) => panic!("error {} {}", display, why.to_string()),
         Ok(file) => file,
     };
 
@@ -95,22 +94,22 @@ fn main() {
     }
 
     let mut name_table_offset = 0x00;
-    let mut name_table_length = 0x00;
+    // let mut name_table_length = 0x00;
     let mut is_found_name_table = false;
 
-    for i in 0..offset_table.num_of_tables {
+    for _i in 0..offset_table.num_of_tables {
         let mut tag_buffer = vec![0; 4 as usize];
         rdr.read(&mut tag_buffer).unwrap();
         let tag_name = str::from_utf8(&tag_buffer).expect("Found invalid UTF-8");
         
-        let check_sum = rdr.read_u32::<BigEndian>().unwrap();
+        let _check_sum = rdr.read_u32::<BigEndian>().unwrap();
         let offset = rdr.read_u32::<BigEndian>().unwrap();
-        let length = rdr.read_u32::<BigEndian>().unwrap();
+        let _length = rdr.read_u32::<BigEndian>().unwrap();
 
         if "name" == tag_name {
             println!("found {}", tag_name);
             name_table_offset = offset;
-            name_table_length = length;
+            // name_table_length = length;
             is_found_name_table = true;
             break;
         }
@@ -125,7 +124,7 @@ fn main() {
     println!("current position : {}", rdr.position());
 
     // NameHeader 생성
-    let mut name_header = NameHeader {
+    let name_header = NameHeader {
         format_selector:rdr.read_u16::<BigEndian>().unwrap(),
         name_record_count :rdr.read_u16::<BigEndian>().unwrap(),
         storage_offset :rdr.read_u16::<BigEndian>().unwrap(),
@@ -138,7 +137,7 @@ fn main() {
 
     let mut name_record_table:Vec<NameRecord> = Vec::new();
 
-    for i in 0..name_header.name_record_count {
+    for _i in 0..name_header.name_record_count {
         let mut name_record = NameRecord {
             platform_id: rdr.read_u16::<BigEndian>().unwrap(),
             encoding_id: rdr.read_u16::<BigEndian>().unwrap(),
@@ -157,7 +156,7 @@ fn main() {
             let mut name_buffer = vec![0; name_record.string_length as usize];
             rdr.read(&mut name_buffer).unwrap();
             
-            let (res, _enc, errors) = EUC_KR.decode(&name_buffer);
+            let (res, _enc, _errors) = EUC_KR.decode(&name_buffer);
             name_record.name = String::from(res);
             name_record_table.push(name_record);
             rdr.set_position(temp_file_pos);
